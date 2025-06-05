@@ -1,0 +1,101 @@
+name: CI/CD Deploy
+
+on:
+  push:
+    branches: [develop]
+
+jobs:
+  build-and-push-image:
+    name: Build & Push Docker Image
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Strapi (produção)
+        run: npm run build # caso exista script build no package.json
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        id: docker_build
+        run: |
+          IMAGE_NAME=${{ secrets.DOCKERHUB_USERNAME }}/strapi-a3:latest
+          docker build -t $IMAGE_NAME .
+          docker push $IMAGE_NAME
+          echo "::set-output name=image::$IMAGE_NAME"
+
+  deploy-terraform:
+    name: Terraform Apply & Deploy to GKE
+    needs: build-and-push-image
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+        with:
+          project_id: ${{ secrets.TF_VAR_project }}
+          service_account_key: ${{ secrets.GCP_SA_KEY }}
+          export_default_credentials: true
+
+      - name: Configure kubectl automatic (após criar/atualizar cluster)
+        # Este passo só funciona depois do terraform apply que gera o cluster
+        # Então precisamos separar a inicialização do Terraform e a obtenção das credenciais
+        # em duas etapas. Primeiro, rodamos o Terraform; depois, usamos get-gke-credentials.
+        run: echo "Vai rodar o Terraform em seguida."
+
+      - name: Initialize Terraform
+        working-directory: ./terraform
+        env:
+          TF_VAR_project: ${{ secrets.TF_VAR_project }}
+          TF_VAR_region: ${{ secrets.TF_VAR_region }}
+          TF_BACKEND_BUCKET: ${{ secrets.TF_BACKEND_BUCKET }}
+          TF_BACKEND_PREFIX: ${{ secrets.TF_BACKEND_PREFIX }}
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ secrets.TF_BACKEND_BUCKET }}" \
+            -backend-config="prefix=${{ secrets.TF_BACKEND_PREFIX }}"
+
+      - name: Terraform Validate & Plan
+        working-directory: ./terraform
+        env:
+          TF_VAR_project: ${{ secrets.TF_VAR_project }}
+          TF_VAR_region: ${{ secrets.TF_VAR_region }}
+        run: |
+          terraform validate
+          terraform plan -out=tfplan
+
+      - name: Terraform Apply
+        working-directory: ./terraform
+        env:
+          TF_VAR_project: ${{ secrets.TF_VAR_project }}
+          TF_VAR_region: ${{ secrets.TF_VAR_region }}
+        run: terraform apply -auto-approve tfplan
+
+      - name: Get GKE Credentials
+        uses: google-github-actions/get-gke-credentials@v1
+        with:
+          cluster_name: strapi-a3-cluster # ou: ${{ var.cluster_name }} caso use var
+          location: ${{ secrets.TF_VAR_region }} # mesma região definida em TF_VAR_region
+
+      - name: Deploy to Kubernetes (aplica manifestos)
+        run: |
+          kubectl apply -f terraform/k8s/deployment.yaml
+          kubectl apply -f terraform/k8s/service.yaml

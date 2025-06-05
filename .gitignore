@@ -31,7 +31,6 @@ $RECYCLE.BIN/
 *.msm
 *.msp
 
-
 ############################
 # Packages
 ############################
@@ -129,3 +128,13 @@ dist
 build
 .strapi-updater.json
 .strapi-cloud.json
+
+
+
+############################
+# Strapi
+############################
+
+.terraform
+.terraform.lock.hcl
+meta-geography-460723-c0-a8a9438b9f84.json
