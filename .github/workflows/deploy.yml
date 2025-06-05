@@ -61,6 +61,11 @@ jobs:
         # em duas etapas. Primeiro, rodamos o Terraform; depois, usamos get-gke-credentials.
         run: echo "Vai rodar o Terraform em seguida."
 
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.5.7 # Substitua pela versão desejada
+
       - name: Initialize Terraform
         working-directory: ./terraform
         env:
