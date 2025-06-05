@@ -1,0 +1,55 @@
+name: PR Tests
+
+on:
+  pull_request:
+    branches: [develop, master]
+
+jobs:
+  e2e-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      strapi:
+        image: node:18
+        options: >-
+          --entrypoint /bin/bash
+          --health-cmd "curl --fail http://localhost:1337 || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 20
+          -v ${{ github.workspace }}:/usr/src/app
+        ports:
+          - 1337:1337
+        env:
+          NODE_ENV: test
+          DATABASE_CLIENT: sqlite
+          DATABASE_FILENAME: ./tmp/data.db
+        command: |
+          bash -lc "cd /usr/src/app && npm ci && npm run build && npm run develop &"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Wait for Strapi to be healthy
+        run: |
+          n=0
+          until curl --fail http://localhost:1337; do
+            n=$((n+1))
+            if [ $n -ge 20 ]; then
+              echo "Strapi não iniciou no tempo esperado" && exit 1
+            fi
+            sleep 5
+          done
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Playwright tests
+        run: npx playwright test
