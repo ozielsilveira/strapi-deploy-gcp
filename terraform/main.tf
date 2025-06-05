@@ -11,7 +11,7 @@ terraform {
   }
 
   backend "gcs" {
-    bucket = "terraform-state-strapi-a3"
-    prefix = "a3/terraform-state"
+    bucket = "${env.TF_BACKEND_BUCKET}"
+    prefix = "${env.TF_BACKEND_PREFIX}"
   }
 }
