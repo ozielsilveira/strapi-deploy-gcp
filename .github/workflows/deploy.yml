@@ -56,35 +56,47 @@ jobs:
     name: Deploy Infrastructure with Terraform
     runs-on: ubuntu-latest
     needs: build-and-push-docker
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Cache Terraform
-        uses: actions/cache@v3
-        with:
-          path: |
-            ./terraform/.terraform
-            ./terraform/terraform.tfstate.d
-          key: ${{ runner.os }}-terraform-${{ hashFiles('**/*.tf') }}
-          restore-keys: |
-            ${{ runner.os }}-terraform-
-
+      # 1) Set up Google Cloud SDK (gcloud CLI) e autentica usando o JSON do Service Account
       - name: Set up Google Cloud SDK
         uses: google-github-actions/setup-gcloud@v1
         with:
           project_id: ${{ secrets.TF_VAR_project }}
           service_account_key: ${{ secrets.GCP_SA_KEY }}
-          export_default_credentials: true
+          export_default_credentials: false
+        # → Não exportamos diretamente, pois criamos o arquivo manualmente no próximo passo.
 
+      # 2) Criar o arquivo de credenciais a partir do segredo GCP_SA_KEY e ajustar permissões
+      - name: Write GCP credentials to file
+        run: |
+          echo "${{ secrets.GCP_SA_KEY }}" > "${HOME}/gcloud-key.json"
+          chmod 600 "${HOME}/gcloud-key.json"
+        # IMPORTANTE: o GitHub Actions executa isso dentro do mesmo runner, então $HOME é /home/runner
+
+      # 3) Ativa o service account usando o gcloud e garante que a variável de ambiente aponte para o JSON
+      - name: Authenticate to GCP for Terraform
+        run: |
+          gcloud auth activate-service-account --key-file="${HOME}/gcloud-key.json"
+        env:
+          # Precisamos dessa variável para que o SDK do Google (gcloud) saiba onde está o JSON:
+          GOOGLE_APPLICATION_CREDENTIALS: "${HOME}/gcloud-key.json"
+
+      # 4) Instalar Terraform
       - name: Install Terraform
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: 1.5.7
 
+      # 5) Inicializar o Terraform (terraform init) apontando o backend para o bucket correto
       - name: Initialize Terraform
         working-directory: ./terraform
         env:
+          # Aqui passamos todas as variáveis necessárias para o Terraform
+          GOOGLE_APPLICATION_CREDENTIALS: "${HOME}/gcloud-key.json"
           TF_VAR_project: ${{ secrets.TF_VAR_project }}
           TF_VAR_region: ${{ secrets.TF_VAR_region }}
           TF_BACKEND_BUCKET: ${{ secrets.TF_BACKEND_BUCKET }}
@@ -94,9 +106,11 @@ jobs:
             -backend-config="bucket=${{ secrets.TF_BACKEND_BUCKET }}" \
             -backend-config="prefix=${{ secrets.TF_BACKEND_PREFIX }}"
 
+      # 6) Aplicar o plano (terraform apply)
       - name: Terraform Apply
         working-directory: ./terraform
         env:
+          GOOGLE_APPLICATION_CREDENTIALS: "${HOME}/gcloud-key.json"
           TF_VAR_project: ${{ secrets.TF_VAR_project }}
           TF_VAR_region: ${{ secrets.TF_VAR_region }}
         run: |
