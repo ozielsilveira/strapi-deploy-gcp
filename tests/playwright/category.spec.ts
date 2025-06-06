@@ -7,13 +7,15 @@ test("Criação de nova Categoria", async ({ page }) => {
     await page.fill('input[name="password"]', "welcomeToStrapi123");
     await page.click('button[type="submit"]');
 
-    // Espera até o painel carregar
+    // Espera o painel carregar
     await page.waitForSelector("text=Content Manager");
 
-    // Vai para a collection Categoria
+    // Espera o botão "Categoria" aparecer e clica
+    await page.waitForSelector("text=Categoria");
     await page.click("text=Categoria");
 
     // Cria nova entrada
+    await page.waitForSelector("text=Create new entry");
     await page.click("text=Create new entry");
 
     // Preenche o campo de nome

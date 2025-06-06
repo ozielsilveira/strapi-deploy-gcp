@@ -7,12 +7,15 @@ test("Criação de novo Artigo", async ({ page }) => {
     await page.fill('input[name="password"]', "welcomeToStrapi123");
     await page.click('button[type="submit"]');
 
+    // Espera o painel carregar
     await page.waitForSelector("text=Content Manager");
 
-    // Vai para a collection Article
+    // Espera o botão "Article" aparecer e clica
+    await page.waitForSelector("text=Article");
     await page.click("text=Article");
 
     // Cria novo artigo
+    await page.waitForSelector("text=Create new entry");
     await page.click("text=Create new entry");
 
     // Preenche os campos
