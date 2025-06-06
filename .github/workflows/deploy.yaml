@@ -83,6 +83,10 @@ jobs:
             --zone ${{ secrets.GKE_CLUSTER_ZONE }} \
             --project ${{ secrets.GCP_PROJECT_ID }}
 
+      - name: Replace image in deployment.yaml
+        run: |
+          sed -i "s|\${{ secrets.DOCKERHUB_USERNAME }}|${{ secrets.DOCKERHUB_USERNAME }}|g" k8s/deployment.yaml
+
       - name: Deploy to Kubernetes
         run: |
           kubectl apply -f k8s/deployment.yaml
