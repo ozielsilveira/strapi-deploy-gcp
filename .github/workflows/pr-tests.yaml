@@ -24,15 +24,19 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
-      - name: Configure Strapi app.keys
+      - name: Load environment variables
         run: |
-          mkdir -p ./config
-          echo "module.exports = { keys: ['key1', 'key2'] };" > ./config/server.js
+          echo "Carregando variáveis de ambiente do arquivo .env"
+          cp .env.example .env
 
       - name: Build Strapi
         run: pnpm build
 
       - name: Start Strapi
+        env:
+          HOST: 0.0.0.0
+          PORT: 1337
+          APP_KEYS: ImJMpHjnCdJw4ii7jZzCXQ==,Jg239VoMach6Fh2LAH6ydA==,LAdmPTwE8oqyVjAV4pCkBQ==,f1gPGngKmE5xhyDktSpCVw==
         run: |
           pnpm develop &
           n=0
