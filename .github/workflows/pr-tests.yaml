@@ -24,6 +24,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
+      - name: Configure Strapi app.keys
+        run: |
+          mkdir -p ./config
+          echo "module.exports = { keys: ['key1', 'key2'] };" > ./config/server.js
+
       - name: Build Strapi
         run: pnpm build
 
