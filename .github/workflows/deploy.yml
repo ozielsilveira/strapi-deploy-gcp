@@ -12,24 +12,27 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Cache Node.js modules
+      - name: Cache pnpm modules
         uses: actions/cache@v3
         with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          path: ~/.pnpm-store
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
-            ${{ runner.os }}-node-
+            ${{ runner.os }}-pnpm-
 
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
           node-version: 18
 
+      - name: Install pnpm
+        run: npm install -g pnpm
+
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install
 
       - name: Build Strapi
-        run: npm run build
+        run: pnpm build
 
   build-and-push-docker:
     name: Build and Push Docker Image
@@ -38,6 +41,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+
+      - name: Log in to Docker Hub
+        run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
 
       - name: Build and push Docker image
         run: |
@@ -74,7 +80,6 @@ jobs:
         run: |
           echo "${{ secrets.GCP_SA_KEY }}" > $HOME/gcloud-key.json
           ls -la $HOME # Verifica se o arquivo foi criado
-          cat $HOME/gcloud-key.json # Opcional: Verifica o conteúdo do arquivo (remova em produção)
         env:
           GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
 
