@@ -23,6 +23,27 @@ spec:
           volumeMounts:
             - name: strapi-json-storage
               mountPath: /usr/src/api-strapi/data
+          env:
+            - name: HOST
+              value: "0.0.0.0"
+            - name: PORT
+              value: "1337"
+            - name: APP_KEYS
+              value: "ImJMpHjnCdJw4ii7jZzCXQ==,Jg239VoMach6Fh2LAH6ydA==,LAdmPTwE8oqyVjAV4pCkBQ==,f1gPGngKmE5xhyDktSpCVw=="
+            - name: API_TOKEN_SALT
+              value: "X2d0C6rgXwWgwEZCslZN0A=="
+            - name: ADMIN_JWT_SECRET
+              value: "deEi8rGl7WB43uXiaYPaOg=="
+            - name: TRANSFER_TOKEN_SALT
+              value: "vhsZEWfU3anLONbLZXZfqg=="
+            - name: DATABASE_CLIENT
+              value: "sqlite"
+            - name: DATABASE_SSL
+              value: "false"
+            - name: DATABASE_FILENAME
+              value: ".tmp/data.db"
+            - name: JWT_SECRET
+              value: "U2Nh9O8oDdw6gzXqWbg5Eg=="
       imagePullSecrets:
         - name: dockerhub-secret
       volumes:

@@ -138,3 +138,4 @@ build
 .terraform
 .terraform.lock.hcl
 GCP_SA_KEY.json
+key-github-actions.json
