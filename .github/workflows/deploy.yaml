@@ -85,7 +85,7 @@ jobs:
 
       - name: Replace image in deployment.yaml
         run: |
-          sed -i "s|\${{ secrets.DOCKERHUB_USERNAME }}|${{ secrets.DOCKERHUB_USERNAME }}|g" k8s/deployment.yaml
+          sed -i "s|\${{ secrets.DOCKERHUB_USERNAME }}/strapi-a3:latest|${{ secrets.DOCKERHUB_USERNAME }}/strapi-a3:latest|g" k8s/deployment.yaml
 
       - name: Deploy to Kubernetes
         run: |
