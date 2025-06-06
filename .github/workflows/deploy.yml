@@ -5,13 +5,20 @@ on:
     branches: [develop]
 
 jobs:
-  build-and-push-image:
-    name: Build & Push Docker Image
+  build-strapi:
+    name: Build Strapi
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+
+      - name: Cache Node.js modules
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
 
       - name: Set up Node.js
         uses: actions/setup-node@v3
@@ -21,32 +28,40 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build Strapi (produção)
-        run: npm run build # caso exista script build no package.json
+      - name: Build Strapi
+        run: npm run build
 
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v2
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Build and push Docker image
-        id: docker_build
-        run: |
-          IMAGE_NAME=${{ secrets.DOCKERHUB_USERNAME }}/strapi-a3:latest
-          docker build -t $IMAGE_NAME .
-          docker push $IMAGE_NAME
-          echo "::set-output name=image::$IMAGE_NAME"
-
-  deploy-terraform:
-    name: Terraform Apply & Deploy to GKE
-    needs: build-and-push-image
+  build-and-push-docker:
+    name: Build and Push Docker Image
     runs-on: ubuntu-latest
-    environment: production
-
+    needs: build-strapi
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+
+      - name: Build and push Docker image
+        run: |
+          IMAGE_NAME=${{ secrets.DOCKERHUB_USERNAME }}/strapi-a3:latest
+          docker build --cache-from $IMAGE_NAME -t $IMAGE_NAME .
+          docker push $IMAGE_NAME
+
+  deploy-terraform:
+    name: Deploy Infrastructure with Terraform
+    runs-on: ubuntu-latest
+    needs: build-and-push-docker
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Cache Terraform
+        uses: actions/cache@v3
+        with:
+          path: |
+            ./terraform/.terraform
+            ./terraform/terraform.tfstate.d
+          key: ${{ runner.os }}-terraform-${{ hashFiles('**/*.tf') }}
+          restore-keys: |
+            ${{ runner.os }}-terraform-
 
       - name: Set up Google Cloud SDK
         uses: google-github-actions/setup-gcloud@v1
@@ -55,17 +70,13 @@ jobs:
           service_account_key: ${{ secrets.GCP_SA_KEY }}
           export_default_credentials: true
 
-      - name: Export Google Application Credentials
+      - name: Create Google Application Credentials File
         run: |
           echo "${{ secrets.GCP_SA_KEY }}" > $HOME/gcloud-key.json
-          cat $HOME/gcloud-key.json # Verifica se o arquivo foi criado corretamente
+          ls -la $HOME # Verifica se o arquivo foi criado
+          cat $HOME/gcloud-key.json # Opcional: Verifica o conteúdo do arquivo (remova em produção)
         env:
           GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
-
-      - name: Set GOOGLE_APPLICATION_CREDENTIALS
-        run: |
-          export GOOGLE_APPLICATION_CREDENTIALS=$HOME/gcloud-key.json
-          echo "GOOGLE_APPLICATION_CREDENTIALS set to $GOOGLE_APPLICATION_CREDENTIALS"
 
       - name: Install Terraform
         uses: hashicorp/setup-terraform@v2
@@ -85,29 +96,10 @@ jobs:
             -backend-config="bucket=${{ secrets.TF_BACKEND_BUCKET }}" \
             -backend-config="prefix=${{ secrets.TF_BACKEND_PREFIX }}"
 
-      - name: Terraform Validate & Plan
-        working-directory: ./terraform
-        env:
-          TF_VAR_project: ${{ secrets.TF_VAR_project }}
-          TF_VAR_region: ${{ secrets.TF_VAR_region }}
-        run: |
-          terraform validate
-          terraform plan -out=tfplan
-
       - name: Terraform Apply
         working-directory: ./terraform
         env:
+          GOOGLE_APPLICATION_CREDENTIALS: $HOME/gcloud-key.json
           TF_VAR_project: ${{ secrets.TF_VAR_project }}
           TF_VAR_region: ${{ secrets.TF_VAR_region }}
-        run: terraform apply -auto-approve tfplan
-
-      - name: Get GKE Credentials
-        uses: google-github-actions/get-gke-credentials@v1
-        with:
-          cluster_name: strapi-a3-cluster # ou: ${{ var.cluster_name }} caso use var
-          location: ${{ secrets.TF_VAR_region }} # mesma região definida em TF_VAR_region
-
-      - name: Deploy to Kubernetes (aplica manifestos)
-        run: |
-          kubectl apply -f terraform/k8s/deployment.yaml
-          kubectl apply -f terraform/k8s/service.yaml
+        run: terraform apply -auto-approve
