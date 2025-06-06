@@ -98,4 +98,4 @@ jobs:
           TF_VAR_project: ${{ secrets.TF_VAR_project }}
           TF_VAR_region: ${{ secrets.TF_VAR_region }}
         run: |
-          terraform apply -auto-approve
+          terraform apply -auto-approve -lock=false
