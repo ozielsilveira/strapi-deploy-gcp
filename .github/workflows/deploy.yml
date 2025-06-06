@@ -91,7 +91,7 @@ jobs:
       - name: Initialize Terraform
         working-directory: ./terraform
         env:
-          GOOGLE_APPLICATION_CREDENTIALS: $HOME/gcloud-key.json
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GCP_SA_KEY }}
           TF_VAR_project: ${{ secrets.TF_VAR_project }}
           TF_VAR_region: ${{ secrets.TF_VAR_region }}
           TF_BACKEND_BUCKET: ${{ secrets.TF_BACKEND_BUCKET }}
