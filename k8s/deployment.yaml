@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: strapi
-          image: ${{ secrets.DOCKERHUB_USERNAME }}/strapi-a3:latest
+          image: ozielsilveirajr/strapi-a3:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 1337
