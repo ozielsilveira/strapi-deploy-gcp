@@ -87,15 +87,15 @@ jobs:
         run: |
           kubectl apply -f k8s/pvc.yaml
 
-      - name: Replace image in deployment.yaml
+      - name: Deploy via envsubst
         run: |
-          sed -i "s|\${{ secrets.DOCKERHUB_USERNAME }}/strapi-a3:latest|${{ secrets.DOCKERHUB_USERNAME }}/strapi-a3:latest|g" k8s/deployment.yaml
-          cat k8s/deployment.yaml
-
-      - name: Deploy to Kubernetes
-        run: |
-          kubectl apply -f k8s/deployment.yaml
+          # Exporta a variável de imagem a partir do secret
+          export DOCKER_IMAGE="${{ secrets.DOCKERHUB_USERNAME }}/strapi-a3:latest"
+          # Substitui ${DOCKER_IMAGE} em k8s/deployment.yaml e aplica
+          envsubst < k8s/deployment.yaml | kubectl apply -f -
+          # Aplica o service
           kubectl apply -f k8s/service.yaml
+          # Reinicia o deployment para garantir rollout
           kubectl rollout restart deployment/strapi-app
 
       - name: Wait for deployment to be ready
