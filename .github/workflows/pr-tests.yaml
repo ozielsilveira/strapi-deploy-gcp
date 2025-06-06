@@ -9,39 +9,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
-    services:
-      strapi:
-        image: node:18
-        options: >-
-          --entrypoint /bin/bash
-          --health-cmd "curl --fail http://localhost:1337 || exit 1"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 20
-          -v ${{ github.workspace }}:/usr/src/app
-        ports:
-          - 1337:1337
-        env:
-          NODE_ENV: test
-          DATABASE_CLIENT: sqlite
-          DATABASE_FILENAME: ./tmp/data.db
-        command: |
-          bash -lc "cd /usr/src/app && pnpm install && pnpm build && pnpm develop &"
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
-
-      - name: Wait for Strapi to be healthy
-        run: |
-          n=0
-          until curl --fail http://localhost:1337; do
-            n=$((n+1))
-            if [ $n -ge 20 ]; then
-              echo "Strapi não iniciou no tempo esperado" && exit 1
-            fi
-            sleep 5
-          done
 
       - name: Set up Node.js
         uses: actions/setup-node@v3
@@ -53,6 +23,21 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install
+
+      - name: Build Strapi
+        run: pnpm build
+
+      - name: Start Strapi
+        run: |
+          pnpm develop &
+          n=0
+          until curl --fail http://localhost:1337; do
+            n=$((n+1))
+            if [ $n -ge 20 ]; then
+              echo "Strapi não iniciou no tempo esperado" && exit 1
+            fi
+            sleep 5
+          done
 
       - name: Run Playwright tests
         run: pnpm exec playwright test
