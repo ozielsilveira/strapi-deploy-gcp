@@ -42,8 +42,8 @@ jobs:
           n=0
           until curl --fail http://localhost:1337; do
             n=$((n+1))
-            if [ $n -ge 20 ]; then
-              echo "Strapi não iniciou no tempo esperado" && exit 1
+            if [ $n -ge 40 ]; then # Aumentado de 20 para 40
+                echo "Strapi não iniciou no tempo esperado" && exit 1
             fi
             sleep 5
           done

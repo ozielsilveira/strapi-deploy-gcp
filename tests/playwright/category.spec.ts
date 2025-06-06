@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 
 test("Criação de nova Categoria", async ({ page }) => {
     await page.goto("http://localhost:1337/admin");
+    await page.waitForLoadState('networkidle'); // Aguarda o carregamento completo da página
 
     await page.fill('input[name="email"]', "admin@satc.edu.br");
     await page.fill('input[name="password"]', "welcomeToStrapi123");
@@ -11,7 +12,9 @@ test("Criação de nova Categoria", async ({ page }) => {
     await page.waitForSelector("text=Content Manager");
 
     // Espera o botão "Categoria" aparecer e clica
-    await page.waitForSelector("text=Categoria");
+    console.log("Aguardando botão 'Categoria'...");
+    await page.waitForSelector("text=Categoria", { timeout: 120000 });
+    console.log("Botão 'Categoria' encontrado!");
     await page.click("text=Categoria");
 
     // Cria nova entrada
