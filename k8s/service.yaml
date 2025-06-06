@@ -4,7 +4,7 @@ metadata:
   name: strapi-service
 spec:
   selector:
-    app: strapi
+    app: strapi-app
   ports:
     - protocol: TCP
       port: 80

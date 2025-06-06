@@ -3,22 +3,27 @@ kind: Deployment
 metadata:
   name: strapi-app
   labels:
-    app: strapi
+    app: strapi-app
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: strapi
+      app: strapi-app
   template:
     metadata:
       labels:
-        app: strapi
+        app: strapi-app
     spec:
       containers:
-      - name: strapi
-        image: ${{ secrets.DOCKERHUB_USERNAME }}/strapi-a3:latest
-        ports:
-        - containerPort: 1337
-        env:
-        - name: NODE_ENV
-          value: production
+        - name: strapi
+          image: ${{ secrets.DOCKERHUB_USERNAME }}/strapi-a3:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 1337
+          volumeMounts:
+            - name: strapi-json-storage
+              mountPath: /usr/src/api-strapi/data
+      volumes:
+        - name: strapi-json-storage
+          persistentVolumeClaim:
+            claimName: strapi-json-pvc
