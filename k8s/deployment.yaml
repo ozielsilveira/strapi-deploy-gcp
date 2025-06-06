@@ -23,7 +23,11 @@ spec:
           volumeMounts:
             - name: strapi-json-storage
               mountPath: /usr/src/api-strapi/data
+      imagePullSecrets:
+        - name: dockerhub-secret
       volumes:
         - name: strapi-json-storage
           persistentVolumeClaim:
             claimName: strapi-json-pvc
+
+
