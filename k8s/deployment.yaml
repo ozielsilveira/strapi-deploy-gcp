@@ -6,6 +6,9 @@ metadata:
     app: strapi-app
 spec:
   replicas: 1
+  progressDeadlineSeconds: 600  # 10 minutos para timeout
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: strapi-app
@@ -20,6 +23,29 @@ spec:
           imagePullPolicy: Always
           ports:
             - containerPort: 1337
+          livenessProbe:
+            httpGet:
+              path: /_health
+              port: 1337
+            initialDelaySeconds: 60
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /_health
+              port: 1337
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+            limits:
+              memory: "1Gi"
+              cpu: "500m"
           volumeMounts:
             - name: strapi-json-storage
               mountPath: /usr/src/api-strapi/data
