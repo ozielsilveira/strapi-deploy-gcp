@@ -4,7 +4,7 @@ test("Deve criar e publicar um novo artigo no Strapi e realizar logout", async (
   page,
 }) => {
   // Acessa a tela de login do painel administrativo
-  await page.goto("http://localhost:1337/admin/auth/login");
+  // await page.goto("http://localhost:1337/admin/auth/login");
 
   // Preenche o campo de e-mail do administrador
   await page.getByRole("textbox", { name: "Email" }).click();
