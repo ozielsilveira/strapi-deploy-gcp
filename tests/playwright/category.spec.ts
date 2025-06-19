@@ -6,6 +6,7 @@ test("Deve criar uma nova categoria no Strapi e fazer logout", async ({
   // Acessa a página de login do painel administrativo
   await page.goto("http://localhost:1337/admin/auth/login");
 
+  // Preenche o campo de e-mail
   await page.getByRole("textbox", { name: "Email" }).click();
   await page.getByRole("textbox", { name: "Email" }).fill("admin@satc.edu.br");
 
